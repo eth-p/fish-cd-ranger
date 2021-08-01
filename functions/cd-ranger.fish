@@ -123,7 +123,10 @@ function __cdranger_bookmarks --description="list ranger bookmarks"
 				if [ -n "$_flag_relative" ]
 					set mark_path "$mark_path_relative"
 				else if [ (string length -- "$mark_path_relative") -lt (string length -- "$mark_path") ]
-					set mark_path "$mark_path_relative"
+					# Ensure we don't have a chain of ../../
+					if ! string match -q --regex -- '^(\.\./)+\.\./?$' "$mark_path_relative"
+						set mark_path "$mark_path_relative"
+					end
 				end
 			end
 			
@@ -249,6 +252,10 @@ function __cdranger_bookmark_hotkey
 	printf "\x1B[?25h" 1>&2
 	
 	# Return the result.
+	if [ "$response" = (printf "\x1B") ]
+		return 1
+	end
+
 	echo "$response"
 	return $response_status
 end
