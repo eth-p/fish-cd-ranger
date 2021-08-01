@@ -217,7 +217,9 @@ function __cdranger_bookmark_hotkey
 	# If lines need to be added, use 'CSI n S' to add lines to the bottom.
 	if [ "$added_lines" -gt 0 ]
 		printf "\x1B[%sS" "$added_lines" 1>&2
-		printf "\x1B[%sA" "$added_lines" 1>&2
+		printf "\x1B[%sA" (math $added_lines - 1) 1>&2
+	else
+		printf "\x1B[B" 1>&2
 	end
 
 	# Set the cursor position to the beginning of the line.
@@ -228,7 +230,7 @@ function __cdranger_bookmark_hotkey
 		printf "\x1B[0;4m%-$term_cols""s\x1B[0m\n" "mark    path"
 		set -l i
 		for i in (seq 1 $max_lines)
-			printf "%s\n" "$bookmarks[$i]" 
+			printf "%s\x1B[G\x1B[B" "$bookmarks[$i]" 
 		end
 	end 1>&2
 
