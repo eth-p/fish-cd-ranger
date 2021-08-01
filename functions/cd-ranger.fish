@@ -75,7 +75,8 @@ end
 function __cdranger_bookmarks --description="list ranger bookmarks"
 	argparse \
 		-x "relative,absolute" -x "get,without-values,delimiter" \
-		"d/delimiter=" "without-values" "relative" "absolute" "get=" -- $argv
+		"d/delimiter=" "relative" "absolute" "get=" \
+		"without-values" "without-auto" "without-pwd" -- $argv
 
 	# Set the default delimiter.
 	if [ -z "$_flag_delimiter" ]
@@ -110,6 +111,16 @@ function __cdranger_bookmarks --description="list ranger bookmarks"
 				continue
 			end
 			set bookmarks_printed $bookmarks_printed "$mark_name"
+
+			# If --without-auto is set, ignore the ' bookmark.
+			if [ "$mark_name" = "'" ] && [ -n "$_flag_without_auto" ]
+				continue
+			end
+
+			# If --without-pwd is set, ignore bookmarks that are the pwd.
+			if [ "$mark_path" = "$pwd" ] && [ -n "$_flag_without_pwd" ]
+				continue
+			end
 
 			# If --without-values is set, just print the name.
 			if [ -n "$_flag_without_values" ]
@@ -184,7 +195,7 @@ function __cdranger_bookmark_hotkey
 	set -l curs_col "$dsr_values[3]"
 
 	# Get the list of bookmarks.
-	set -l bookmarks (__cdranger_bookmarks --delimiter=(printf "\t")) || begin
+	set -l bookmarks (__cdranger_bookmarks --delimiter=(printf "\t") --without-pwd) || begin
 		__cdranger_bookmark_hotkey --no-display
 		return $status
 	end
