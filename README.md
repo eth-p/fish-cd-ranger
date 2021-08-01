@@ -17,7 +17,7 @@
 With [fisher](https://github.com/jorgebucaran/fisher):
 
 ```fish
-fisher add eth-p/fish-cd-ranger
+fisher install eth-p/fish-cd-ranger
 ```
 
 ### Hotkey Support
