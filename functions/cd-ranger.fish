@@ -216,8 +216,9 @@ function __cdranger_bookmark_hotkey
 	end
 
 	# Determine how many lines we need to add to the terminal.
-	set -l free_lines (math "$term_rows" - "$curs_row" - 1)
-	set -l added_lines (math "$max_lines" - "$free_lines")
+	set -l free_lines (math "$term_rows" - "$curs_row")
+	set -l needed_lines (math "$max_lines" + 1)
+	set -l added_lines (math "$needed_lines" - "$free_lines")
 	if [ "$added_lines" -lt 0 ]
 		set added_lines 0
 	end
@@ -229,6 +230,11 @@ function __cdranger_bookmark_hotkey
 	if [ "$added_lines" -gt 0 ]
 		printf "\x1B[%sS" "$added_lines" 1>&2
 		printf "\x1B[%sA" (math $added_lines - 1) 1>&2
+
+		# Workaround for an edge case.
+		if [ "$added_lines" -eq 1 ]
+			printf "\x1B[B" 1>&2
+		end
 	else
 		printf "\x1B[B" 1>&2
 	end
@@ -257,6 +263,11 @@ function __cdranger_bookmark_hotkey
 		end
 		printf "\x1B[K"
 	end 1>&2
+
+	# Move the cursor back to its original line.
+	if [ "$added_lines" -eq 0 ] && [ "$needed_lines" != "$free_lines" ]
+		printf "\x1B[A" 1>&2
+	end
 
 	# Redraw the prompt.
 	commandline -f repaint
