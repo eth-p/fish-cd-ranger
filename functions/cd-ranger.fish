@@ -100,6 +100,7 @@ function __cdranger_bookmarks --description="list ranger bookmarks"
 	set -l bookmarks_printed
 	set -l file
 	set -l pwd (pwd)
+	set -l home_length (string length -- "$HOME")
 	for file in $bookmark_files
 		while read -l line
 			set -l split (string split --max=1 -- ':' "$line")
@@ -133,10 +134,22 @@ function __cdranger_bookmarks --description="list ranger bookmarks"
 				set -l mark_path_relative (realpath --relative-to="$pwd" "$mark_path")
 				if [ -n "$_flag_relative" ]
 					set mark_path "$mark_path_relative"
-				else if [ (string length -- "$mark_path_relative") -lt (string length -- "$mark_path") ]
-					# Ensure we don't have a chain of ../../
-					if ! string match -q --regex -- '^(\.\./)+\.\./?$' "$mark_path_relative"
-						set mark_path "$mark_path_relative"
+				else
+					# Substitute $HOME with ~.
+					if [ (string sub --length="$home_length" "$mark_path") = "$HOME" ]
+						if [ "$mark_path" != "$HOME" ]
+							set mark_path (printf "~%s" \
+								(string sub --start=(math $home_length + 1) "$mark_path")
+							)
+						end
+					end
+
+					# If the relative path is shorter, use that.
+					if [ (string length -- "$mark_path_relative") -lt (string length -- "$mark_path") ]
+						# Ensure we don't have a chain of ../../
+						if ! string match -q --regex -- '^(\.\./)+\.\./?$' "$mark_path_relative"
+							set mark_path "$mark_path_relative"
+						end
 					end
 				end
 			end
