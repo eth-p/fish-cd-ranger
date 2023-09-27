@@ -72,6 +72,85 @@ function cd-ranger --description="Change directory using ranger"
 	end
 end
 
+function __cdranger_cleanpath --description="normalizes a path"
+	set -l cwd (string split "/" (pwd))
+	set -l pathc
+	for pathc in $argv
+		set -l components (string split "/" (string replace --regex "/{2,}" "/" $pathc))
+		set -l i 2
+		
+		# If not absolute path, prepend the working directory.
+		if [ $components[1] != "" ]
+			set split $cwd $components
+		end
+
+		# Resolve parent and self-directory components.
+		while [ $i -le (count $components) ]
+			switch $components[$i]
+				case "."
+					set components \
+						$components[1..(math $i - 1)] \
+						$components[(math $i + 1)..]
+					
+				case ".."
+					if [ $i = 2 ]
+						# Already at root.
+						set i (math $i + 1)
+						set components $components[1] ".." $components[2..]
+					else
+						# Remove parent.
+						set components \
+							$components[1..(math $i - 2)] \
+							$components[(math $i + 1)..]
+
+						set i (math $i - 1)
+					end
+
+				case '*'
+					set i (math $i + 1)
+			end
+		end
+		
+		# Print the result.
+		set -l cleaned (string join "/" $components)
+		if [ "$cleaned" = "" ]
+			set cleaned "/"
+		end
+
+		printf "%s\n" $cleaned
+	end
+end
+
+function __cdranger_relpath --description="determines a relative path"
+	set -l from (string sub -s 2 (__cdranger_cleanpath $argv[1]))
+	set -l to   (string sub -s 2 (__cdranger_cleanpath $argv[2]))
+
+	# Find a common prefix.
+	set -l prefix
+	set -l component
+	set -l from_components (string split "/" $from)
+	set -l to_components   (string split "/" $to)
+
+	set -l i 0
+	for component in $from_components
+		set i (math $i + 1)
+		if [ $component = "$to_components[$i]" ]
+			set prefix $prefix $component
+		end
+	end
+
+	set prefix (string join "/" $prefix)
+
+	# Remove the common prefix.
+	set prefix_len (math (string length $prefix) + 2)
+	set from (string sub -s $prefix_len $from)
+	set to (string sub -s $prefix_len $to)
+
+	printf "%s%s\n" \
+		(string repeat --count (count (string split "/" $from)) "../") \
+		$to
+end
+
 function __cdranger_bookmarks --description="list ranger bookmarks"
 	argparse \
 		-x "relative,absolute" -x "get,without-values,delimiter" \
@@ -131,7 +210,7 @@ function __cdranger_bookmarks --description="list ranger bookmarks"
 
 			# Use the relative path if it's shorter or if --relative is set.
 			if [ -z "$_flag_absolute" ]
-				set -l mark_path_relative (realpath --relative-to="$pwd" "$mark_path")
+				set -l mark_path_relative (__cdranger_relpath "$pwd" "$mark_path")
 				if [ -n "$_flag_relative" ]
 					set mark_path "$mark_path_relative"
 				else
